@@ -15,13 +15,18 @@ if st.button("সিগন্যাল চেক করুন"):
         data = yf.download(ticker, period="100d", interval="1d")
         
         if not data.empty:
+            # MultiIndex কলাম থাকলে তা একক কলামে রূপান্তর করা হচ্ছে
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = data.columns.get_level_values(0)
+            
             # ইন্ডিকেটর হিসাব
             data['SMA_20'] = data['Close'].rolling(window=20).mean()
             data['SMA_50'] = data['Close'].rolling(window=50).mean()
             
-            latest_sma20 = float(data['SMA_20'].iloc[-1])
-            latest_sma50 = float(data['SMA_50'].iloc[-1])
-            current_price = float(data['Close'].iloc[-1])
+            # ডেটা থেকে সিঙ্গেল ভ্যালু নেওয়া নিশ্চিত করা হচ্ছে
+            latest_sma20 = float(data['SMA_20'].dropna().iloc[-1])
+            latest_sma50 = float(data['SMA_50'].dropna().iloc[-1])
+            current_price = float(data['Close'].dropna().iloc[-1])
             
             # স্ক্রিনে দেখানো
             st.metric(label=f"বর্তমান মূল্য ({ticker})", value=f"${current_price:,.2f}")
@@ -37,6 +42,7 @@ if st.button("সিগন্যাল চেক করুন"):
                 
             # চার্ট দেখানো
             st.subheader("মূল্যের চার্ট (সর্বশেষ ১০০ দিন)")
-            st.line_chart(data[['Close', 'SMA_20', 'SMA_50']])
+            chart_data = data[['Close', 'SMA_20', 'SMA_50']].dropna()
+            st.line_chart(chart_data)
         else:
             st.error("সঠিক নাম লিখুন। ডেটা পাওয়া যায়নি।")
